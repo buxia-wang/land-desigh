@@ -260,3 +260,16 @@ const mini=$('minimap'),mc=mini.getContext('2d');function mapPoint(x,z){return [
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 let frames=0;function tick(now){requestAnimationFrame(tick);let dt=Math.min((now-last)/1000,.05);last=now;if(transition){let t=THREE.MathUtils.clamp((now-transition.start)/1100,0,1),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.targetFrom,transition.target,s);if(t===1)transition=null}if(mode==='orbit'){controls.update()}else{let speed=(keys.ShiftLeft||keys.ShiftRight?14:5)*dt;let forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),move=new THREE.Vector3();if(keys.KeyW)move.add(forward);if(keys.KeyS)move.sub(forward);if(keys.KeyD)move.add(right);if(keys.KeyA)move.sub(right);if(move.lengthSq())move.normalize().multiplyScalar(speed);if(mode==='fly'){if(keys.KeyE)move.y+=speed;if(keys.KeyQ)move.y-=speed}else move.y=0;let next=camera.position.clone().add(move);let blocked=mode==='walk'&&collisions.some(c=>{let dx=next.x-c.x,dz=next.z-c.z,a=c.angle||0;return Math.abs(Math.cos(a)*dx-Math.sin(a)*dz)<c.w/2+.3&&Math.abs(Math.sin(a)*dx+Math.cos(a)*dz)<c.d/2+.3});if(!blocked)camera.position.copy(next);camera.position.x=THREE.MathUtils.clamp(camera.position.x,-190,190);camera.position.z=THREE.MathUtils.clamp(camera.position.z,-220,220);camera.position.y=mode==='walk'?1.75:THREE.MathUtils.clamp(camera.position.y,1.75,280)}renderer.render(scene,camera);if(frames++%10===0)drawMap()}
 window.__landExplorer={scene,model,camera,controls,palms,roads,goto,setMode,renderer,parking,carportGroup,carportRoofGroup,temporaryGroup,power,powerGroup,shadeTrees,shadeGroup,cableRoutes,cableGroup,irrigation,irrigationGroup,containerLayout,collisions,orchardTrees,orchardArea,land,housingAngle,passagePoints,fenceSlope,fenceIntercept};$('stats').textContent=palms.length+' 株槟榔 · '+orchardTrees.length+' 株果树 · '+shadeTrees.length+' 棵遮阴树';$('loading').style.display='none';tick(performance.now());
+
+function bindSizeToggle(buttonId, shellId, contentId, name){
+ const button=$(buttonId),shell=$(shellId),content=$(contentId);
+ button.addEventListener('click',()=>{
+  const expanded=button.getAttribute('aria-expanded')==='true';
+  button.setAttribute('aria-expanded',String(!expanded));
+  content.hidden=expanded;
+  shell.classList.toggle('is-small',expanded);
+  button.textContent=(expanded?'+ 展开':'− 缩小')+name;
+ });
+}
+bindSizeToggle('panelSize','sitePanel','panelContent','面板');
+bindSizeToggle('mapSize','minimapShell','minimap','地图');
