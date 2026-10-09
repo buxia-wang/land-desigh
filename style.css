@@ -13,3 +13,14 @@
 .minimap-shell.is-small{width:130px}
 @media(max-width:850px){.minimap-shell{right:16px;width:120px}.minimap-shell #minimap{height:140px}}
 @media(max-width:550px){.minimap-shell{bottom:125px;width:100px}.minimap-shell #minimap{height:118px}.minimap-shell .size-toggle{padding:10px 5px;font-size:11px}.minimap-shell.is-small{width:110px}.panel>.size-toggle{font-size:11px;margin-bottom:10px}}
+
+.touch-navigation{position:absolute;inset:0;z-index:8;pointer-events:none}
+.joystick-wrap,.lift-wrap{position:absolute;bottom:calc(140px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;flex-direction:column;gap:8px;pointer-events:auto;user-select:none;-webkit-user-select:none;touch-action:none}
+.joystick-wrap{left:max(20px,env(safe-area-inset-left,0px))}.lift-wrap{right:max(20px,env(safe-area-inset-right,0px))}
+.joystick{position:relative;width:124px;height:124px;border-radius:50%;background:#f7faedbb;border:2px solid #ffffffc9;box-shadow:0 6px 25px #173b3033;touch-action:none}
+.joystick-knob{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px;border-radius:50%;background:#315740;border:2px solid #ffffffc9;box-shadow:0 3px 10px #173b3040;pointer-events:none;will-change:transform}
+.joy-direction{position:absolute;font-size:12px;color:#315740;pointer-events:none}.joy-forward{top:6px;left:50%;transform:translateX(-50%)}.joy-back{bottom:6px;left:50%;transform:translateX(-50%)}.joy-left{left:8px;top:50%;transform:translateY(-50%)}.joy-right{right:8px;top:50%;transform:translateY(-50%)}
+.lift-button{width:62px;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid #ffffffc9;border-radius:12px;background:#f7faeddd;color:#315740;touch-action:none;font-size:17px}.lift-button span{font-size:11px}.lift-button.is-held{background:#315740;color:#fff}.lift-button:focus-visible{outline:3px solid #90b47b}
+.touch-control-label{font-size:11px;padding:4px 9px;border-radius:14px;background:#234232aa;color:#fff;pointer-events:none}
+.touch-roaming .minimap-shell{bottom:320px}.touch-roaming .panel{max-height:calc(100dvh - 355px)}.touch-roaming .panel.is-small{max-height:none}
+@media(max-height:560px){.joystick-wrap,.lift-wrap{bottom:110px}.joystick{width:104px;height:104px}.lift-button{min-height:46px;width:56px}.touch-roaming .minimap-shell{display:none}.touch-roaming .panel{max-height:calc(100dvh - 315px)}}
