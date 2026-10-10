@@ -26,3 +26,5 @@
 @media(max-height:560px){.joystick-wrap,.lift-wrap{bottom:110px}.joystick{width:104px;height:104px}.lift-button{min-height:46px;width:56px}.touch-roaming .minimap-shell{display:none}.touch-roaming .panel{max-height:calc(100dvh - 315px)}}
 
 .room-tour{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:8px 0 12px}.room-tour button{min-height:34px;border:1px solid #d3decc;border-radius:6px;color:#385342;background:#eef1e6;font-size:11px}.room-tour button:hover{background:#dce5d6}
+
+.design-guide-link{display:block;padding:12px 0;margin:8px 0;color:#294b38;text-decoration:none;font-size:14px;border-bottom:1px solid #d7ddcf}.design-guide-link:focus-visible{outline:2px solid #294b38;outline-offset:3px}
