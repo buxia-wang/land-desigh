@@ -1,6 +1,8 @@
 # 三角地块 3D 规划场景
 
-打开线上场景，或在本目录运行 `python3 -m http.server 8765 --directory dist` 后访问 http://127.0.0.1:8765 。
+Windows：安装 Node.js LTS 或 Python 3 后双击 `start-windows.cmd`。其他系统运行 `node preview.mjs` 或 `python3 preview.py`，再打开显示的本地网址。无需安装第三方依赖。
+
+接手编辑流程见 [Windows 编辑指南](WINDOWS.md)。
 
 - 环绕：左键旋转、右键平移、滚轮缩放。
 - 地面：选择地面漫游，点击画面，WASD 移动、Shift 加速、Esc 退出。
@@ -83,3 +85,7 @@ Three.js r170 / MIT，版权信息保留在 vendor 文件中。
 ## V1.19 客户设计参考资料
 
 补齐住宅雨篷檐沟、排水立管及管卡，入口铭牌移至墙面外侧。新增可打印的设计说明，列出六个房间用途、配色、道路与设备布置、模型查看方法。交付包包含 GLB、效果图及 PDF。独立大门图稿尚未找到，入口仍为待按图核对的配套参考方案。
+
+## Windows 接手支持
+
+新增 Windows CMD 启动器、Node/Python 本地服务器和编辑指南，自动识别 dist 与 Pages 根目录，支持中文路径、端口占用回退及无缓存预览。保留现有模型与布局。
