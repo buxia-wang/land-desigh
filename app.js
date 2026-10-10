@@ -126,9 +126,11 @@ for(let z=23;z<=48;z+=5.6)for(let x=-40;x<=-20;x+=5.6){if(!inside(x,z,orchardAre
 // Relocate one overlapping fruit tree to the orchard's upper end.
 const movedFruitIndex=orchardTrees.findIndex(t=>Math.abs(t.x+40)<.01&&Math.abs(t.z-45.4)<.01);
 if(movedFruitIndex>=0){orchardTrees[movedFruitIndex].x=-20.5;orchardTrees[movedFruitIndex].z=17.8;orchardGroup.children[movedFruitIndex].position.set(-20.5,0,17.8);}
+const accessFruitIndex=orchardTrees.findIndex(t=>Math.abs(t.x+34.4)<.1&&Math.abs(t.z-45.4)<.1);
+if(accessFruitIndex>=0){orchardTrees[accessFruitIndex].x=-32.2;orchardGroup.children[accessFruitIndex].position.x=-32.2;}
 // Irrigation facilities relocated to the selected gap between carport and upper containers.
 const irrigationGroup=new THREE.Group();irrigationGroup.name='果园灌溉_水井与泵房';model.add(irrigationGroup);
-const irrigation={well:{x:-46.6,z:52.7,r:.75},house:{x:-49.7,z:53.1,w:3,d:2.4,h:2.65}};
+const irrigation={well:{x:-43.6,z:52.65,r:.75},house:{x:-46.7,z:52.4,w:3,d:2.4,h:2.65}};
 const pumpBlue=material('#35749b',{metalness:.45,roughness:.4}),pipeBlue=material('#3885a0',{metalness:.3,roughness:.55}),brickMat=material('#b1aaa0'),pipeBlack=material('#34443e');
 function cylinder(r1,r2,h,x,y,z,mat,parent=irrigationGroup){const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,24),mat);mesh.position.set(x,y,z);mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);return mesh}
 function pipe(a,b,r=.055,mat=pipeBlue){let av=new THREE.Vector3(...a),bv=new THREE.Vector3(...b),v=bv.clone().sub(av);let mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,v.length(),10),mat);mesh.position.copy(av).add(bv).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());mesh.castShadow=true;irrigationGroup.add(mesh);return mesh}
@@ -185,7 +187,7 @@ shadeTrees.forEach((t,i)=>{let tree=new THREE.Group();tree.name='遮阴树_'+(i+
  const bed=new THREE.Mesh(new THREE.CircleGeometry(.95,24),material('#847654'));bed.rotation.x=-Math.PI/2;bed.position.y=.12;bed.receiveShadow=true;tree.add(bed);collisions.push({x:t.x,z:t.z,w:.85,d:.85,angle:0});
 });
 // Distribution house close to the slanted fence. Routes represent underground cables.
-const power={x:-57.1,z:60.4,w:2.6,d:2.0,h:2.7,angle:Math.atan2(156,124.44)};
+const power={x:-50.1,z:53,w:2.6,d:2.0,h:2.7,angle:0};
 const powerGroup=new THREE.Group();powerGroup.name='围栏旁_配电房';powerGroup.position.set(power.x,0,power.z);powerGroup.rotation.y=power.angle;model.add(powerGroup);
 box(power.w+.3,.2,power.d+.3,0,.15,0,mats.concrete,powerGroup);
 box(power.w,power.h,power.d,0,power.h/2+.25,0,mats.plaster,powerGroup);
@@ -208,11 +210,11 @@ const sideBusX=leftX-.3,topBusZ=topZ-1.3,bottomBusZ=bottomZ+1.5;
 cableRoute('住宅供电主干',[[power.x,power.z],HP(sideBusX,49.5),HP(sideBusX,topBusZ),HP(firstX+step+3.3,topBusZ)]);
 cableRoute('下排住宅供电主干',[HP(sideBusX,49.5),HP(sideBusX,bottomBusZ),HP(firstX+step*2+3.3,bottomBusZ)]);
 containerLayout.forEach((c,i)=>{const old=i<2?[firstX+i*step,topZ]:i===2?[leftX+1.22,49.5]:[firstX+(i-3)*step,bottomZ];const tap=i<2?HP(old[0],topBusZ):i===2?HP(sideBusX,49.5):HP(old[0],bottomBusZ);cableRoute('集装箱房'+(i+1)+'支线',[tap,[c.x,c.z]]);const g=model.children.find(g=>g.name===c.name);box(.32,.42,.10,0,1.1,i<2?-1.28:1.28,cabinetMat,g)});
-cableRoute('泵房供电',[[power.x,power.z],[-54.5,58.5],[ph.x,ph.z+ph.d/2]]);
+cableRoute('泵房供电',[[power.x,power.z],[ph.x,ph.z+ph.d/2]]);
 cableRoute('场地照明供电',[[ph.x,ph.z-ph.d/2],[-16,50.5],[-12,46.8],[-12,25.2],[-12,4.8]]);
 for(let py of [760,930,1110]){let [x,z]=P(500,py);cableRoute('路灯'+py+'支线',[[-12,z],[x,z]])}
 // Three covered bays fit within the slanted fence pocket; local front faces the access road.
-const parking={carport:{x:-43.8,z:47.2,w:8.4,d:5.3,angle:Math.atan2(156,124.44),bays:3},temporary:{x:-24.5,z:54.6,w:8.4,d:6.4,bays:3},access:{width:3,points:[[-14.7,49.2],[-31.5,49.2],[-38,49.2],[-41.73,48.86]]}};
+const parking={carport:{x:-40.4,z:46.0,w:8.4,d:5.3,angle:Math.PI/2+housingAngle,bays:3},temporary:{x:-24.5,z:54.6,w:8.4,d:6.4,bays:3},access:{width:3,points:[[-14.7,49.2],[-31.5,49.2],[-35.6,49.2],[-36.8,47.5],[-36.8,43.4]]}};
 const carportGroup=new THREE.Group();carportGroup.name='围栏内_三车位车棚';carportGroup.position.set(parking.carport.x,0,parking.carport.z);carportGroup.rotation.y=parking.carport.angle;model.add(carportGroup);
 const pavementMat=material('#afa99a'),parkingPaint=material('#ede8cc'),roofMat=material('#54726d',{metalness:.5,roughness:.5});
 box(8.8,.15,5.7,0,.14,0,pavementMat,carportGroup);
@@ -235,7 +237,7 @@ const cp=parking.carport;
 // A 3 m access lane joins the main road and the carport entrance.
 road(parking.access.points.map(([x,z])=>[x/.12+600,z/.12+720]),parking.access.width);
 // Open apron joins the three-metre access lane without blocking doors or the well.
-poly([[-43.0,48.3],[-40.0,48.3],[-35.8,49.2],[-35.8,50.7],[-40.7,50.4]],roadMat,.17);
+poly([[-38.0,42.0],[-35.3,42.0],[-35.3,50.3],[-38.0,50.3]],roadMat,.17);
 const temporaryGroup=new THREE.Group();temporaryGroup.name='入口旁_三个临时车位';temporaryGroup.position.set(parking.temporary.x,0,parking.temporary.z);model.add(temporaryGroup);
 box(8.4,.10,6.4,0,.105,0,material('#b6b2a0',{map:grassTex}),temporaryGroup);
 for(let x of [-4.05,-1.35,1.35,4.05])box(.075,.018,5.0,x,.17,0,parkingPaint,temporaryGroup);
@@ -246,8 +248,8 @@ function car(x,z){let g=new THREE.Group();g.name='入口车辆';model.add(g);box
 const treeGeo=new THREE.IcosahedronGeometry(1,2),treeMat=material('#496643');for(let i=0;i<48;i++){let x=-100+rand()*230,z=-140+rand()*260;if(inside(x,z)||nearRoad(x,z,5))continue;let h=4+rand()*4;box(.3,h,.3,x,h/2,z,mats.wood);for(let j=0;j<3;j++){let tree=new THREE.Mesh(treeGeo,treeMat);tree.position.set(x+(rand()-.5)*2,h+j*.5,z+(rand()-.5)*2);tree.scale.set(2.3+rand(),1.7+rand(),2.3+rand());tree.castShadow=true;scene.add(tree)}}
 // Lighting fixtures along the main circulation.
 for(let py of [760,930,1110]){let [x,z]=P(500,py);box(.09,3.7,.09,x,1.85,z,mats.metal);box(.5,.12,.5,x,3.7,z,mats.metal);box(.35,.12,.35,x,3.57,z,material('#fff1cd',{emissive:'#ffd59b',emissiveIntensity:.6}))}
-const labelGroup=new THREE.Group();scene.add(labelGroup);function label(text,px,py,color='#264b35',height=4){let c=document.createElement('canvas');c.width=512;c.height=96;let ctx=c.getContext('2d');ctx.fillStyle='#f7f7e9ed';ctx.beginPath();ctx.roundRect(3,3,506,90,18);ctx.fill();ctx.fillStyle=color;ctx.font='500 30px PingFang SC, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,256,48);let t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;let sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,depthWrite:false,transparent:true}));let [x,z]=P(px,py);sprite.position.set(x,height,z);sprite.scale.set(17,3.2,1);labelGroup.add(sprite)}label('生活区 · C 字集装箱',170,1190,'#805d3d',7);label('车棚 · 3 个车位',235,1113,'#44675d',4);label('3 m 车棚道路',386,1130,'#647466',1);label('临时车位 · 3 位',396,1176,'#6e7254',2);label('配电房',124,1223,'#766443',4);label('灌溉井与泵房',197,1161,'#386f79',4);label('果园 · 示意果树',368,1002,'#486739',6);label('围栏通道 · 净宽 1.5 m',243,1270,'#79684c',2);label('槟榔种植区 · 3.0 亩',735,724);label('预留区 · 5.9 亩',835,1030,'#687339',3);label('上部树阵',1000,300,'#3d6337',11);label('4 m 联络道路',965,855,'#647466',.8);label('3 m 种植通道',844,575,'#647466',1);label('2 m 支路',994,427,'#647466',1);label('6 m 入口',469,1240,'#647466',1.5);label('4 m 主路',478,1000,'#647466',1);
-let mode='orbit',yaw=0,pitch=0,keys={},transition=null,last=performance.now(),drag=null;const views={all:{pos:[108,108,150],target:[5,0,-3],title:'用地全景'},home:{pos:[hx+34,42,hz+40],target:[hx+6,2,hz-4],title:'生活区 · C 字形集装箱与果园'},power:{pos:[-35,27,75],target:[-57,2,63],title:'遮阴树与配电房'},pump:{pos:[-54,24,66],target:[-48.5,1,53.1],title:'果园灌溉 · 水井与泵房'},parking:{pos:[-12,29,70],target:[-37,1,49],title:'停车规划 · 车棚与临时车位'},orchard:{pos:[-8,24,65],target:[-28,2,37],title:'果园 · 成排果树'},plant:{pos:[25,28,27],target:[20,3,-8],title:'槟榔种植区 · 林间空间'},reserve:{pos:[60,40,97],target:[25,0,33],title:'预留区 · 开放草地'},top:{pos:[0,230,0.1],target:[0,0,0],title:'平面俯瞰 · 道路与分区'}};
+const labelGroup=new THREE.Group();scene.add(labelGroup);function label(text,px,py,color='#264b35',height=4){let c=document.createElement('canvas');c.width=512;c.height=96;let ctx=c.getContext('2d');ctx.fillStyle='#f7f7e9ed';ctx.beginPath();ctx.roundRect(3,3,506,90,18);ctx.fill();ctx.fillStyle=color;ctx.font='500 30px PingFang SC, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,256,48);let t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;let sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,depthWrite:false,transparent:true}));let [x,z]=P(px,py);sprite.position.set(x,height,z);sprite.scale.set(17,3.2,1);labelGroup.add(sprite)}label('生活区 · C 字集装箱',170,1190,'#805d3d',7);label('车棚 · 3 个车位',260,1103,'#44675d',4);label('3 m 车棚道路',386,1130,'#647466',1);label('临时车位 · 3 位',396,1176,'#6e7254',2);label('配电房',182,1162,'#766443',4);label('灌溉井与泵房',224,1157,'#386f79',4);label('果园 · 示意果树',368,1002,'#486739',6);label('围栏通道 · 净宽 1.5 m',243,1270,'#79684c',2);label('槟榔种植区 · 3.0 亩',735,724);label('预留区 · 5.9 亩',835,1030,'#687339',3);label('上部树阵',1000,300,'#3d6337',11);label('4 m 联络道路',965,855,'#647466',.8);label('3 m 种植通道',844,575,'#647466',1);label('2 m 支路',994,427,'#647466',1);label('6 m 入口',469,1240,'#647466',1.5);label('4 m 主路',478,1000,'#647466',1);
+let mode='orbit',yaw=0,pitch=0,keys={},transition=null,last=performance.now(),drag=null;const views={all:{pos:[108,108,150],target:[5,0,-3],title:'用地全景'},home:{pos:[hx+34,42,hz+40],target:[hx+6,2,hz-4],title:'生活区 · C 字形集装箱与果园'},power:{pos:[-38,20,69],target:[-48,2,53],title:'遮阴树与配电房'},pump:{pos:[-54,24,66],target:[-46.5,1,52.5],title:'果园灌溉 · 水井与泵房'},parking:{pos:[-12,29,70],target:[-37,1,49],title:'停车规划 · 车棚与临时车位'},orchard:{pos:[-8,24,65],target:[-28,2,37],title:'果园 · 成排果树'},plant:{pos:[25,28,27],target:[20,3,-8],title:'槟榔种植区 · 林间空间'},reserve:{pos:[60,40,97],target:[25,0,33],title:'预留区 · 开放草地'},top:{pos:[0,230,0.1],target:[0,0,0],title:'平面俯瞰 · 道路与分区'}};
 function toast(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>$('toast').style.display='none',3500)}
 const touchDeviceQuery=matchMedia('(pointer: coarse)');
 const touchInput={x:0,forward:0,up:false,down:false,joystickPointer:null};
