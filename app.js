@@ -252,7 +252,8 @@ function toast(s){$('toast').textContent=s;$('toast').style.display='block';clea
 const touchDeviceQuery=matchMedia('(pointer: coarse)');
 const touchInput={x:0,forward:0,up:false,down:false,joystickPointer:null};
 let walkEyeHeight=1.75;
-const isTouchDevice=()=>touchDeviceQuery.matches||(navigator.maxTouchPoints>0&&innerWidth<=1024);
+// Some mobile/in-app browsers omit coarse pointer or touch-point reports.
+const isTouchDevice=()=>navigator.userAgentData?.mobile===true||/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||touchDeviceQuery.matches||matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0;
 // Apply the device default once; resizing and navigation preserve manual choices.
 $('labels').checked=!isTouchDevice();
 labelGroup.visible=dimensionGroup.visible=$('labels').checked;
@@ -282,19 +283,15 @@ window.__landExplorer={scene,model,camera,controls,palms,roads,goto,setMode,rend
 
 function bindSizeToggle(buttonId, shellId, contentId, name){
  const button=$(buttonId),shell=$(shellId),content=$(contentId);
- button.addEventListener('click',()=>{
-  const expanded=button.getAttribute('aria-expanded')==='true';
-  button.setAttribute('aria-expanded',String(!expanded));
-  content.hidden=expanded;
-  shell.classList.toggle('is-small',expanded);
-  button.textContent=(expanded?'+ 展开':'− 缩小')+name;
- });
+ const setExpanded=expanded=>{
+  button.setAttribute('aria-expanded',String(expanded));
+  content.hidden=!expanded;
+  shell.classList.toggle('is-small',!expanded);
+  button.textContent=(expanded?'− 缩小':'+ 展开')+name;
+ };
+ button.addEventListener('click',()=>setExpanded(button.getAttribute('aria-expanded')!=='true'));
+ setExpanded(!isTouchDevice());
 }
 bindSizeToggle('panelSize','sitePanel','panelContent','面板');
 bindSizeToggle('mapSize','minimapShell','minimap','地图');
 
-// Mobile starts compact; subsequent manual choices remain unchanged.
-if(isTouchDevice()){
- $('panelSize').click();
- $('mapSize').click();
-}
