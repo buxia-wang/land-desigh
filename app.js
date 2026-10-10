@@ -253,6 +253,9 @@ const touchDeviceQuery=matchMedia('(pointer: coarse)');
 const touchInput={x:0,forward:0,up:false,down:false,joystickPointer:null};
 let walkEyeHeight=1.75;
 const isTouchDevice=()=>touchDeviceQuery.matches||(navigator.maxTouchPoints>0&&innerWidth<=1024);
+// Apply the device default once; resizing and navigation preserve manual choices.
+$('labels').checked=!isTouchDevice();
+labelGroup.visible=dimensionGroup.visible=$('labels').checked;
 function resetTouchInput(){touchInput.x=touchInput.forward=0;touchInput.up=touchInput.down=false;touchInput.joystickPointer=null;$('joystickKnob').style.transform='translate(0px,0px)';for(const id of ['touchUp','touchDown'])$(id).classList.remove('is-held')}
 function updateTouchNavigation(){const active=isTouchDevice()&&mode!=='orbit';$('touchNavigation').hidden=!active;document.body.classList.toggle('touch-roaming',active);$('liftLabel').textContent=mode==='walk'?'视点高度':'飞行高度';if(active)$('hint').textContent='左侧摇杆移动 · 拖动画面转向 · 按住右侧升降'}
 const joystick=$('moveJoystick');
