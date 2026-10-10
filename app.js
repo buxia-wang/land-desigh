@@ -292,3 +292,9 @@ function bindSizeToggle(buttonId, shellId, contentId, name){
 }
 bindSizeToggle('panelSize','sitePanel','panelContent','面板');
 bindSizeToggle('mapSize','minimapShell','minimap','地图');
+
+// Mobile starts compact; subsequent manual choices remain unchanged.
+if(isTouchDevice()){
+ $('panelSize').click();
+ $('mapSize').click();
+}
