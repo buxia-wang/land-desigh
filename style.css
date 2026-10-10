@@ -24,3 +24,5 @@
 .touch-control-label{font-size:11px;padding:4px 9px;border-radius:14px;background:#234232aa;color:#fff;pointer-events:none}
 .touch-roaming .minimap-shell{bottom:320px}.touch-roaming .panel{max-height:calc(100dvh - 355px)}.touch-roaming .panel.is-small{max-height:none}
 @media(max-height:560px){.joystick-wrap,.lift-wrap{bottom:110px}.joystick{width:104px;height:104px}.lift-button{min-height:46px;width:56px}.touch-roaming .minimap-shell{display:none}.touch-roaming .panel{max-height:calc(100dvh - 315px)}}
+
+.room-tour{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:8px 0 12px}.room-tour button{min-height:34px;border:1px solid #d3decc;border-radius:6px;color:#385342;background:#eef1e6;font-size:11px}.room-tour button:hover{background:#dce5d6}
