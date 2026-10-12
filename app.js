@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {GLTFExporter} from './vendor/GLTFExporter.js';
-import {furnishContainer,buildSiteDetails} from './detail-design.js?v=1.20';
+import {furnishContainer,buildSiteDetails} from './detail-design.js?v=1.21';
 const $=id=>document.getElementById(id);let seed=47;function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}const P=(x,z)=>[(x-600)*.12,(z-720)*.12];
 const scene=new THREE.Scene();scene.background=new THREE.Color('#bbced0');scene.fog=new THREE.Fog('#bbced0',180,650);const model=new THREE.Group();model.name='参考规划_米制概念模型';scene.add(model);
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.25,1000);camera.position.set(108,108,150);const renderer=new THREE.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,preserveDrawingBuffer:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.13;$('scene').appendChild(renderer.domElement);const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(5,0,-3);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.493;controls.minDistance=4;controls.maxDistance=420;controls.update();
@@ -18,38 +18,42 @@ function slab(points,depth,y,parent){points=clipToLand(points);if(points.length<
 let ground=new THREE.Mesh(new THREE.PlaneGeometry(1600,1600),grassMat);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);const land=[P(23,1330),P(1060,30),P(1070,1145)];poly(land,material('#8f9b5d',{map:grassTex}));const upper=[P(570,610),P(1060,30),P(1065,625)];poly(upper,material('#798b4c',{map:grassTex}),.04);poly([P(23,1330),P(385,830),P(334,1270)],material('#b8b19a',{map:grassTex}),.05);poly([P(335,1270),P(533,875),P(1067,881),P(1070,1145)],material('#a3aa69',{map:grassTex}),.045);
 // Separate road intersection surfaces physically; offsets survive GLB export.
 let roadSurfaceIndex=0;const roads=[],roadSegments=[],roadGroup=new THREE.Group();roadGroup.name='水泥路基_伸缩缝与路缘';model.add(roadGroup);
-function road(points,width,name='接入道路'){const pp=points.map(p=>P(...p)),route={name,points:pp,width,surface:'水泥路基'};roads.push(route);for(let i=1;i<pp.length;i++){const a=pp[i-1],b=pp[i],dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz),nx=dz/length,nz=-dx/length,y=.142+roadSurfaceIndex++*.001;
-const ribbon=(lo,hi,start=0,end=length)=>[[a[0]+dx/length*start+nx*lo,a[1]+dz/length*start+nz*lo],[a[0]+dx/length*end+nx*lo,a[1]+dz/length*end+nz*lo],[a[0]+dx/length*end+nx*hi,a[1]+dz/length*end+nz*hi],[a[0]+dx/length*start+nx*hi,a[1]+dz/length*start+nz*hi]];
-slab(ribbon(-width/2,width/2),.11,.025,roadGroup).name='水泥稳定路基';poly(ribbon(-width/2,width/2),roadMat,y,roadGroup).name='水泥路面_'+width+'m';
-roadSegments.push({route,a,b,dx,dz,length,nx,nz,width,y,ribbon});}
+function road(points,width,name='接入道路',endWidth=width){const pp=points.map(p=>P(...p)),route={name,points:pp,width,endWidth,surface:'水泥路基'};roads.push(route);for(let i=1;i<pp.length;i++){const a=pp[i-1],b=pp[i],dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz),nx=dz/length,nz=-dx/length,y=.142+roadSurfaceIndex++*.001;
+const widthAt=t=>width+(endWidth-width)*t/length,at=(t,offset)=>[a[0]+dx/length*t+nx*offset*widthAt(t)/width,a[1]+dz/length*t+nz*offset*widthAt(t)/width];
+const ribbon=(lo,hi,start=0,end=length)=>[at(start,lo),at(end,lo),at(end,hi),at(start,hi)];
+slab(ribbon(-width/2,width/2),.11,.025,roadGroup).name='水泥稳定路基';poly(ribbon(-width/2,width/2),roadMat,y,roadGroup).name='水泥路面_'+width+(width===endWidth?'':'至'+endWidth)+'m';
+roadSegments.push({route,a,b,dx,dz,length,nx,nz,width,endWidth,widthAt,y,ribbon,envelope:ribbon(-width/2,width/2)});}
 const segments=roadSegments.filter(s=>s.route===route);for(let i=1;i<segments.length;i++){const prev=segments[i-1],next=segments[i],p=next.a;for(const side of [-1,1]){const join=[p,[p[0]+prev.nx*width/2*side,p[1]+prev.nz*width/2*side],[p[0]+next.nx*width/2*side,p[1]+next.nz*width/2*side]];slab(join,.11,.025,roadGroup).name='转角连续路基';poly(join,roadMat,Math.max(prev.y,next.y)+.0005,roadGroup).name='转角连续水泥路面';}}}
 // Trace the user's black centerlines in the original plan coordinates.
 // Keep the 6/4/3/2 m hierarchy and stop full-width blind ends inside the fence.
 const mainRoadStart=P(461,1247),mainRoadEnd=P(518,740);
 const mainRoadXAt=z=>mainRoadStart[0]+(mainRoadEnd[0]-mainRoadStart[0])*(z-mainRoadStart[1])/(mainRoadEnd[1]-mainRoadStart[1]);
 const mainRoadPixelAt=py=>mainRoadXAt(P(600,py)[1])/.12+600;
-road([[461,1247],[mainRoadPixelAt(1150),1150]],6,'入口直线道路');
-road([[mainRoadPixelAt(1150),1150],[518,740]],4,'果园旁直线主路');
+const roadPixelPoint=z=>[mainRoadXAt(z)/.12+600,z/.12+720];
+road([[461,1247],roadPixelPoint(54)],6,'入口直线道路');
+road([roadPixelPoint(54),roadPixelPoint(48)],6,'6米至4米渐变过渡',4);
+road([roadPixelPoint(48),[518,740]],4,'果园旁直线主路');
 road([[467,854],[1050,854]],4,'东西联络道路');
 road([[847,854],[847,420]],3,'槟榔林纵向通道');
 road([[847,420],[1047,169],[1047,95]],3,'上部斜向及尖角通道');
 road([[760,420],[1055,420]],2,'上部横向支路');
 // Find the portions of a detail strip that fall inside another road's footprint.
 function roadDetailSpans(segment,offset,halfWidth=.065){
- const {a,dx,dz,length,nx,nz}=segment,origin=[a[0]+nx*offset,a[1]+nz*offset],direction=[dx/length,dz/length],blocked=[];
- for(const other of roadSegments){if(other===segment)continue;const ox=origin[0]-other.a[0],oz=origin[1]-other.a[1],ux=other.dx/other.length,uz=other.dz/other.length;
-  const axes=[[ox*ux+oz*uz,direction[0]*ux+direction[1]*uz,-halfWidth,other.length+halfWidth],[ox*other.nx+oz*other.nz,direction[0]*other.nx+direction[1]*other.nz,-other.width/2-halfWidth,other.width/2+halfWidth]];
-  let lo=0,hi=length;for(const [p,v,min,max]of axes){if(Math.abs(v)<1e-9){if(p<min||p>max){hi=-1;break;}}else{const t1=(min-p)/v,t2=(max-p)/v;lo=Math.max(lo,Math.min(t1,t2));hi=Math.min(hi,Math.max(t1,t2));}}
+ const {a,dx,dz,length,nx,nz,width,endWidth}=segment,origin=[a[0]+nx*offset,a[1]+nz*offset],change=offset*(endWidth/width-1),direction=[(dx+nx*change)/length,(dz+nz*change)/length],blocked=[];
+ for(const other of roadSegments){if(other===segment)continue;
+  let lo=0,hi=length;for(let i=0;i<other.envelope.length;i++){const p=other.envelope[i],q=other.envelope[(i+1)%other.envelope.length],ex=q[0]-p[0],ez=q[1]-p[1],edgeLength=Math.hypot(ex,ez),distance=-(ex*(origin[1]-p[1])-ez*(origin[0]-p[0]))/edgeLength+halfWidth,slope=-(ex*direction[1]-ez*direction[0])/edgeLength;
+   if(Math.abs(slope)<1e-9){if(distance<0){hi=-1;break;}}else if(slope>0)lo=Math.max(lo,-distance/slope);else hi=Math.min(hi,-distance/slope);
+  }
   if(hi>lo)blocked.push([lo,hi]);
  }
  blocked.sort((a,b)=>a[0]-b[0]);const spans=[];let cursor=0;for(const [lo,hi]of blocked){if(lo>cursor)spans.push([cursor,lo]);cursor=Math.max(cursor,hi);}if(cursor<length)spans.push([cursor,length]);return spans;
 }
-function roadJunction(x,z,route,margin=0){return roadSegments.some(s=>{if(s.route===route)return false;const dx=x-s.a[0],dz=z-s.a[1],along=(dx*s.dx+dz*s.dz)/s.length,across=dx*s.nx+dz*s.nz;return along>=-margin&&along<=s.length+margin&&Math.abs(across)<=s.width/2+margin;});}
+function roadJunction(x,z,route,margin=0){return roadSegments.some(s=>s.route!==route&&s.envelope.every((p,i)=>{const q=s.envelope[(i+1)%s.envelope.length],dx=q[0]-p[0],dz=q[1]-p[1];return -(dx*(z-p[1])-dz*(x-p[0]))/Math.hypot(dx,dz)>=-margin;}));}
 function finishRoadDetails(){for(const s of roadSegments){
  for(const side of [-1,1])for(const [start,end]of roadDetailSpans(s,side*s.width/2))if(end-start>.02)poly(s.ribbon(side*s.width/2-.065,side*s.width/2+.065,start,end),mats.concrete,s.y+.01,roadGroup).name='收边路缘';
  const jointSpans=roadDetailSpans(s,0,s.width/2+.03);for(let t=4;t<s.length-.2;t+=4)if(jointSpans.some(([start,end])=>t-.014>=start&&t+.014<=end))poly(s.ribbon(-s.width/2+.15,s.width/2-.15,t-.014,t+.014),jointMat,s.y+.003,roadGroup).name='水泥路面伸缩缝';
 }}
-function nearRoad(x,z,margin=1){return roads.some(r=>r.points.slice(1).some((b,i)=>{let a=r.points[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz)));return Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<r.width/2+margin}))}
+function nearRoad(x,z,margin=1){return roads.some(r=>r.points.slice(1).some((b,i)=>{let a=r.points[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz))),width=r.width+(r.endWidth-r.width)*t;return Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<width/2+margin}))}
 function inside(x,z,points=land){let result=false;for(let i=0,j=points.length-1;i<points.length;j=i++){let a=points[i],b=points[j];if(((a[1]>z)!=(b[1]>z))&&(x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0]))result=!result}return result}
 const boundaryGroup=new THREE.Group();model.add(boundaryGroup);function line3(points,color,y=.2,parent=boundaryGroup){const g=new THREE.BufferGeometry().setFromPoints(points.map(p=>new THREE.Vector3(p[0],y,p[1])));let l=new THREE.Line(g,new THREE.LineBasicMaterial({color}));parent.add(l);return l}line3([...land,land[0]],'#bf7954');
 // Fine wire perimeter fence, with an entrance left open.
@@ -187,7 +191,8 @@ const accessFruitIndex=orchardTrees.findIndex(t=>Math.abs(t.x+34.4)<.1&&Math.abs
 if(accessFruitIndex>=0){orchardTrees[accessFruitIndex].x=-32.2;orchardGroup.children[accessFruitIndex].position.x=-32.2;}
 // Irrigation facilities relocated to the selected gap between carport and upper containers.
 const irrigationGroup=new THREE.Group();irrigationGroup.name='果园灌溉_水井与泵房';model.add(irrigationGroup);
-const irrigation={well:{x:-43.6,z:52.6,r:.75},house:{x:-46.7,z:52.6,w:3,d:2.4,h:2.65}};
+const irrigation={well:{x:-43.6,z:52.6,r:.75},house:{x:-46.7,z:52.6,w:3,d:2.4,h:2.65,angle:housingAngle}};
+function stationPoint(ph,x,z){const a=ph.angle||0;return [ph.x+Math.cos(a)*x+Math.sin(a)*z,ph.z-Math.sin(a)*x+Math.cos(a)*z];}
 const pumpBlue=material('#35749b',{metalness:.45,roughness:.4}),pipeBlue=material('#3885a0',{metalness:.3,roughness:.55}),brickMat=material('#b1aaa0'),pipeBlack=material('#34443e');
 function cylinder(r1,r2,h,x,y,z,mat,parent=irrigationGroup){const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,24),mat);mesh.position.set(x,y,z);mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);return mesh}
 function pipe(a,b,r=.055,mat=pipeBlue,parent=irrigationGroup){let av=new THREE.Vector3(...a),bv=new THREE.Vector3(...b),v=bv.clone().sub(av);let mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,v.length(),10),mat);mesh.position.copy(av).add(bv).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());mesh.castShadow=true;parent.add(mesh);return mesh}
@@ -202,9 +207,10 @@ for(let h of [.29,.47,.65,.83]){let ring=new THREE.Mesh(new THREE.TorusGeometry(
 cylinder(.77,.77,.09,well.x,.955,well.z,mats.metal);
 cylinder(.28,.28,.035,well.x,.998,well.z,mats.concrete);
 box(.28,.045,.045,well.x,1.035,well.z,mats.metal,group);
-pipe([well.x,.95,well.z],[well.x,1.24,well.z]);pipe([well.x,1.24,well.z],[ph.x-.65,1.24,ph.z]);
+const inlet=stationPoint(ph,-.65,0);pipe([well.x,.95,well.z],[well.x,1.24,well.z]);pipe([well.x,1.24,well.z],[inlet[0],1.24,inlet[1]]);
 // Valve hand wheel beside the well.
 let wheel=new THREE.Mesh(new THREE.TorusGeometry(.16,.025,6,16),material('#ad5b3a'));wheel.position.set(well.x+.65,1.44,well.z);wheel.rotation.x=Math.PI/2;group.add(wheel);pipe([well.x+.65,1.24,well.z],[well.x+.65,1.44,well.z],.035,mats.metal);
+const houseStart=group.children.length;
 box(ph.w+.5,.2,ph.d+.5,ph.x,.15,ph.z,mats.concrete,group);
 box(ph.w,ph.h,.14,ph.x,ph.h/2+.25,ph.z-ph.d/2,mats.plaster,group);
 for(let side of [-1,1])box(.14,ph.h,ph.d,ph.x+side*ph.w/2,ph.h/2+.25,ph.z,mats.plaster,group);
@@ -230,13 +236,15 @@ let gauge=cylinder(.105,.105,.055,ph.x-.58,1.36,ph.z+.1,mats.white);gauge.rotati
 box(.4,.56,.12,ph.x+.9,1.45,ph.z-ph.d/2+.12,mats.metal,group);
 // Native model signage, retained in GLB exports.
 let signCanvas=document.createElement('canvas');signCanvas.width=384;signCanvas.height=96;let signCtx=signCanvas.getContext('2d');signCtx.fillStyle='#e8eee2';signCtx.fillRect(0,0,384,96);signCtx.fillStyle='#355a46';signCtx.font='500 36px PingFang SC, sans-serif';signCtx.textAlign='center';signCtx.fillText(title,192,60);let signTexture=new THREE.CanvasTexture(signCanvas);signTexture.colorSpace=THREE.SRGBColorSpace;let sign=new THREE.Mesh(new THREE.PlaneGeometry(1.7,.43),new THREE.MeshStandardMaterial({map:signTexture,roughness:.85}));sign.position.set(ph.x,2.76,ph.z+ph.d/2+.081);group.add(sign);
-collisions.push({x:ph.x,z:ph.z,w:ph.w+.25,d:ph.d+.25,angle:0},{x:well.x,z:well.z,w:1.7,d:1.7,angle:0});
+// One local assembly keeps the building, equipment and later trim aligned.
+const houseParts=group.children.slice(houseStart),houseGroup=new THREE.Group();houseGroup.name=title+'_建筑及设备';houseGroup.position.set(ph.x,0,ph.z);houseGroup.rotation.y=ph.angle||0;group.add(houseGroup);for(const child of houseParts){child.position.x-=ph.x;child.position.z-=ph.z;houseGroup.add(child);}spec.houseGroup=houseGroup;
+collisions.push({x:ph.x,z:ph.z,w:ph.w+.25,d:ph.d+.25,angle:ph.angle||0},{x:well.x,z:well.z,w:1.7,d:1.7,angle:0});
 }
 buildWaterStation(irrigation,irrigationGroup,'果园灌溉泵房');
 const well=irrigation.well,ph=irrigation.house;
 // One main feed and thin drip laterals to each planted row.
 const mainX=-19.5;
-pipe([ph.x+1.8,.28,ph.z+.1],[ph.x+1.8,-.2,ph.z+.1]);pipe([ph.x+1.8,-.2,ph.z+.1],[mainX,-.2,ph.z+.1]);pipe([mainX,-.2,ph.z+.1],[mainX,-.2,51.0]);pipe([mainX,-.2,51.0],[mainX,-.2,47.5]);pipe([mainX,-.2,47.5],[mainX,.14,47.1]);pipe([mainX,.14,47.1],[mainX,.14,17.8]);
+const outlet=stationPoint(ph,1.8,.1);pipe([outlet[0],.28,outlet[1]],[outlet[0],-.2,outlet[1]]);pipe([outlet[0],-.2,outlet[1]],[mainX,-.2,outlet[1]]);pipe([mainX,-.2,outlet[1]],[mainX,-.2,51.0]);pipe([mainX,-.2,51.0],[mainX,-.2,47.5]);pipe([mainX,-.2,47.5],[mainX,.14,47.1]);pipe([mainX,.14,47.1],[mainX,.14,17.8]);
 const rowZ=[...new Set(orchardTrees.map(t=>t.z))];
 rowZ.forEach(z=>{const row=orchardTrees.filter(t=>t.z===z),xmin=Math.min(mainX,...row.map(t=>t.x)),xmax=Math.max(mainX,...row.map(t=>t.x));pipe([xmin,.13,z],[xmax,.13,z],.025,pipeBlack);row.forEach(t=>{let loop=new THREE.Mesh(new THREE.TorusGeometry(.6,.022,5,24),pipeBlack);loop.rotation.x=Math.PI/2;loop.position.set(t.x,.13,t.z);irrigationGroup.add(loop)})});
 const arecaWater={house:{x:23.4,z:-38.76,w:3,d:2.4,h:2.65},well:{x:26.52,z:-38.76,r:.75}};
@@ -253,7 +261,7 @@ shadeTrees.forEach((t,i)=>{let tree=new THREE.Group();tree.name='遮阴树_'+(i+
  const bed=new THREE.Mesh(new THREE.CircleGeometry(.95,24),material('#847654'));bed.rotation.x=-Math.PI/2;bed.position.y=.12;bed.receiveShadow=true;tree.add(bed);collisions.push({x:t.x,z:t.z,w:.85,d:.85,angle:0});
 });
 // Distribution house close to the slanted fence. Routes represent underground cables.
-const power={x:-50.1,z:52.8,w:2.6,d:2.0,h:2.7,angle:0};
+const power={x:-50.1,z:ph.z-(-50.1-ph.x)*Math.tan(housingAngle)+(ph.d-2)/(2*Math.cos(housingAngle)),w:2.6,d:2.0,h:2.7,angle:housingAngle};
 const powerGroup=new THREE.Group();powerGroup.name='围栏旁_配电房';powerGroup.position.set(power.x,0,power.z);powerGroup.rotation.y=power.angle;model.add(powerGroup);
 box(power.w+.3,.2,power.d+.3,0,.15,0,mats.concrete,powerGroup);
 box(power.w,power.h,power.d,0,power.h/2+.25,0,mats.plaster,powerGroup);
@@ -276,11 +284,12 @@ const sideBusX=leftX-.3,topBusZ=topZ-1.3,bottomBusZ=bottomZ+1.5;
 cableRoute('住宅供电主干',[[power.x,power.z],HP(sideBusX,49.5),HP(sideBusX,topBusZ),HP(firstX+step+3.3,topBusZ)]);
 cableRoute('下排住宅供电主干',[HP(sideBusX,49.5),HP(sideBusX,bottomBusZ),HP(firstX+step*2+3.3,bottomBusZ)]);
 containerLayout.forEach((c,i)=>{const old=i<2?[firstX+i*step,topZ]:i===2?[leftX+1.22,49.5]:[firstX+(i-3)*step,bottomZ];const tap=i<2?HP(old[0],topBusZ):i===2?HP(sideBusX,49.5):HP(old[0],bottomBusZ);cableRoute('集装箱房'+(i+1)+'支线',[tap,[c.x,c.z]]);const g=model.children.find(g=>g.name===c.name);box(.32,.42,.10,0,1.1,i<2?-1.28:1.28,cabinetMat,g)});
-cableRoute('泵房供电',[[power.x,power.z],[ph.x,ph.z+ph.d/2]]);
+const pumpDoor=stationPoint(ph,0,ph.d/2);cableRoute('泵房供电',[[power.x,power.z],pumpDoor]);
 cableRoute('场地照明供电',[[ph.x,ph.z-ph.d/2],[-16,50.5],[-12,46.8],[-12,25.2],[-12,4.8]]);
 for(let py of [760,930,1110]){let [x,z]=P(500,py);cableRoute('路灯'+py+'支线',[[-12,z],[x,z]])}
 // Three covered bays fit within the slanted fence pocket; local front faces the access road.
-const parking={carport:{x:-40.4,z:46.0,w:8.4,d:5.3,angle:Math.PI/2+housingAngle,bays:3},temporary:{x:-24.5,z:54.6,w:8.4,d:6.4,angle:housingAngle,bays:3},access:{width:3,points:[[mainRoadXAt(49.2),49.2],[-36.8,49.2],[-36.8,43.4]]}};
+const mainRoadAngle=Math.atan2(mainRoadStart[0]-mainRoadEnd[0],mainRoadStart[1]-mainRoadEnd[1]);
+const parking={carport:{x:-40.4,z:46.5,w:8.4,d:5.3,angle:Math.PI/2,bays:3},temporary:{x:-24.5,z:55.3,w:8.4,d:6.4,angle:mainRoadAngle,bays:3},access:{width:3,points:[[mainRoadXAt(49.2),49.2],[-36.8,49.2],[-36.8,43.4]]}};
 const carportGroup=new THREE.Group();carportGroup.name='围栏内_三车位车棚';carportGroup.position.set(parking.carport.x,0,parking.carport.z);carportGroup.rotation.y=parking.carport.angle;model.add(carportGroup);
 const pavementMat=roadMat,parkingPaint=material('#ede8cc'),roofMat=material('#54726d',{metalness:.5,roughness:.5});
 box(8.8,.15,5.7,0,.14,0,pavementMat,carportGroup);
@@ -305,11 +314,12 @@ road(parking.access.points.map(([x,z])=>[x/.12+600,z/.12+720]),parking.access.wi
 // Open apron joins the three-metre access lane without blocking doors or the well.
 poly([[-38.0,42.0],[-35.3,42.0],[-35.3,50.3],[-38.0,50.3]],roadMat,.17);
 const temporaryGroup=new THREE.Group();temporaryGroup.name='入口旁_三个临时车位';temporaryGroup.position.set(parking.temporary.x,0,parking.temporary.z);temporaryGroup.rotation.y=parking.temporary.angle;model.add(temporaryGroup);
-box(8.4,.10,6.4,0,.105,0,roadMat,temporaryGroup);
-for(let x of [-4.05,-1.35,1.35,4.05])box(.075,.018,5.0,x,.17,0,parkingPaint,temporaryGroup);
-box(8.1,.018,.075,0,.17,2.5,parkingPaint,temporaryGroup);
+const temporaryPaving=material('#567987',{roughness:.96}),temporaryPaint=material('#f4f5ef');
+box(8.4,.10,6.4,0,.105,0,temporaryPaving,temporaryGroup).name='蓝灰色临时停车地坪';
+for(let x of [-4.05,-1.35,1.35,4.05])box(.085,.018,5.0,x,.17,0,temporaryPaint,temporaryGroup).name='临时车位整齐划线';
+for(const z of [-2.5,2.5])box(8.1,.018,.085,0,.17,z,temporaryPaint,temporaryGroup).name='临时车位边线';
 for(let i=0;i<3;i++){let x=-2.7+i*2.7;parkingNumber('T'+(i+1),x,-1.8,temporaryGroup);box(1.4,.09,.15,x,.20,2.1,mats.concrete,temporaryGroup)}
-function car(x,z){let g=new THREE.Group();g.name='入口车辆';model.add(g);box(1.9,.65,4.2,x,.65,z,material('#d5cfb9'),g);box(1.6,.65,2.1,x,1.24,z,mats.glass,g);box(1.75,.08,2.2,x,1.6,z,mats.white,g);for(let a of [-1,1])for(let b of [-1,1]){let wheel=new THREE.Mesh(new THREE.CylinderGeometry(.36,.36,.2,14),material('#252c29'));wheel.rotation.z=Math.PI/2;wheel.position.set(x+a*.95,.42,z+b*1.3);g.add(wheel)}for(let a of [-1,1])box(.45,.2,.06,x+a*.55,.8,z+2.13,material('#fff5d9'),g);g.applyMatrix4(new THREE.Matrix4().makeTranslation(x,0,z).multiply(new THREE.Matrix4().makeRotationY(parking.temporary.angle)).multiply(new THREE.Matrix4().makeTranslation(-x,0,-z)))}car(-24.5,54.6);
+function car(x,z){let g=new THREE.Group();g.name='入口车辆';model.add(g);box(1.9,.65,4.2,x,.65,z,material('#d5cfb9'),g);box(1.6,.65,2.1,x,1.24,z,mats.glass,g);box(1.75,.08,2.2,x,1.6,z,mats.white,g);for(let a of [-1,1])for(let b of [-1,1]){let wheel=new THREE.Mesh(new THREE.CylinderGeometry(.36,.36,.2,14),material('#252c29'));wheel.rotation.z=Math.PI/2;wheel.position.set(x+a*.95,.42,z+b*1.3);g.add(wheel)}for(let a of [-1,1])box(.45,.2,.06,x+a*.55,.8,z+2.13,material('#fff5d9'),g);g.applyMatrix4(new THREE.Matrix4().makeTranslation(x,0,z).multiply(new THREE.Matrix4().makeRotationY(parking.temporary.angle)).multiply(new THREE.Matrix4().makeTranslation(-x,0,-z)))}car(parking.temporary.x,parking.temporary.z);
 // Perimeter landscaping stays wholly inside the plot; the exterior is plain context ground.
 const perimeterTrees=[],perimeterGroup=new THREE.Group();perimeterGroup.name='界内景观绿带';model.add(perimeterGroup);
 const treeGeo=new THREE.IcosahedronGeometry(1,2),treeMat=material('#496643');
@@ -356,10 +366,10 @@ function dialog(content){keys={};drag=null;resetTouchInput();$('dialogContent').
 window.addEventListener('keydown',e=>{if($('dialog').open)return;if(['KeyW','KeyA','KeyS','KeyD','KeyQ','KeyE','ShiftLeft','ShiftRight'].includes(e.code)&&mode!=='orbit')e.preventDefault();keys[e.code]=true});window.addEventListener('keyup',e=>keys[e.code]=false);window.addEventListener('blur',()=>{keys={};drag=null;resetTouchInput()});document.addEventListener('pointerlockchange',()=>{keys={}});
 renderer.domElement.addEventListener('pointerdown',e=>{if(mode==='orbit')return;if(drag)return;drag={x:e.clientX,y:e.clientY,pointerId:e.pointerId};renderer.domElement.setPointerCapture(e.pointerId);if(e.pointerType==='mouse'&&!document.pointerLockElement){let p=renderer.domElement.requestPointerLock();if(p?.catch)p.catch(()=>{})}});for(const event of ['pointerup','pointercancel'])window.addEventListener(event,e=>{if(drag?.pointerId===e.pointerId)drag=null});renderer.domElement.addEventListener('lostpointercapture',e=>{if(drag?.pointerId===e.pointerId)drag=null});window.addEventListener('mousemove',e=>{if(mode==='orbit')return;let dx=0,dy=0;if(document.pointerLockElement===renderer.domElement){dx=e.movementX;dy=e.movementY}else if(drag){dx=e.clientX-drag.x;dy=e.clientY-drag.y;drag={...drag,x:e.clientX,y:e.clientY}}yaw-=dx*.0025;pitch=THREE.MathUtils.clamp(pitch-dy*.0025,-1.5,1.5);camera.rotation.set(pitch,yaw,0)});renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerType==='touch'&&drag?.pointerId===e.pointerId&&mode!=='orbit'){yaw-=(e.clientX-drag.x)*.004;pitch=THREE.MathUtils.clamp(pitch-(e.clientY-drag.y)*.004,-1.5,1.5);camera.rotation.set(pitch,yaw,0);drag={...drag,x:e.clientX,y:e.clientY}}});
 $('export').onclick=async()=>{let b=$('export');b.disabled=true;b.textContent='正在打包模型…';try{const exporter=new GLTFExporter();let result=await exporter.parseAsync(model,{binary:true,onlyVisible:false});let blob=new Blob([result],{type:'model/gltf-binary'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='三角地块-完整设计参考.glb';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);toast('完整设计参考 GLB 已导出，单位为米')}catch(e){console.error(e);toast('导出失败，请重试')}finally{b.disabled=false;b.innerHTML='↓ 导出三维模型 <small>GLB</small>'}};
-const mini=$('minimap'),mc=mini.getContext('2d');function mapPoint(x,z){return [30+(x+70)*1.15,18+(z+85)*1.32]}function drawMap(){mc.clearRect(0,0,220,260);mc.fillStyle='#eef1e6';mc.fillRect(0,0,220,260);mc.fillStyle='#aab992';mc.strokeStyle='#8c9c74';mc.beginPath();land.forEach(([x,z],i)=>{let [a,b]=mapPoint(x,z);i?mc.lineTo(a,b):mc.moveTo(a,b)});mc.closePath();mc.fill();mc.stroke();mc.fillStyle='#698553';palms.forEach(p=>{let [a,b]=mapPoint(p.x,p.z);mc.beginPath();mc.arc(a,b,.65,0,6.28);mc.fill()});mc.fillStyle='#447239';orchardTrees.forEach(t=>{let [a,b]=mapPoint(t.x,t.z);mc.beginPath();mc.arc(a,b,2.7,0,6.28);mc.fill()});mc.strokeStyle='#ede6d1';roads.forEach(r=>{mc.lineWidth=r.width*1.1;mc.beginPath();r.points.forEach(([x,z],i)=>{let [a,b]=mapPoint(x,z);i?mc.lineTo(a,b):mc.moveTo(a,b)});mc.stroke()});mc.fillStyle='#667e72';containerLayout.forEach(c=>{let [a,b]=mapPoint(c.x,c.z);mc.save();mc.translate(a,b);mc.rotate(-(c.angle||0));mc.fillRect(-c.w*.575,-c.d*.66,c.w*1.15,c.d*1.32);mc.restore()});mc.fillStyle='#3885a0';for(const spec of [irrigation,arecaWater]){let [a,b]=mapPoint(spec.house.x,spec.house.z);mc.fillRect(a-2,b-2,4,4);let [wx,wy]=mapPoint(spec.well.x,spec.well.z);mc.beginPath();mc.arc(wx,wy,1.5,0,6.28);mc.fill()}let [cx,cy]=mapPoint(camera.position.x,camera.position.z);mc.fillStyle='#294b36';mc.beginPath();mc.arc(cx,cy,4,0,6.28);mc.fill();mc.fillStyle='#647559';mc.font='10px sans-serif';mc.fillText('SITE / 位置示意',15,246)}
+const mini=$('minimap'),mc=mini.getContext('2d');function mapPoint(x,z){return [30+(x+70)*1.15,18+(z+85)*1.32]}function drawMap(){mc.clearRect(0,0,220,260);mc.fillStyle='#eef1e6';mc.fillRect(0,0,220,260);mc.fillStyle='#aab992';mc.strokeStyle='#8c9c74';mc.beginPath();land.forEach(([x,z],i)=>{let [a,b]=mapPoint(x,z);i?mc.lineTo(a,b):mc.moveTo(a,b)});mc.closePath();mc.fill();mc.stroke();mc.fillStyle='#698553';palms.forEach(p=>{let [a,b]=mapPoint(p.x,p.z);mc.beginPath();mc.arc(a,b,.65,0,6.28);mc.fill()});mc.fillStyle='#447239';orchardTrees.forEach(t=>{let [a,b]=mapPoint(t.x,t.z);mc.beginPath();mc.arc(a,b,2.7,0,6.28);mc.fill()});mc.strokeStyle='#ede6d1';roads.forEach(r=>{for(let i=1;i<r.points.length;i++){const a=r.points[i-1],b=r.points[i],steps=r.width===r.endWidth?1:12;for(let j=0;j<steps;j++){const t=j/steps,u=(j+1)/steps;mc.lineWidth=(r.width+(r.endWidth-r.width)*(t+u)/2)*1.1;mc.beginPath();mc.moveTo(...mapPoint(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t));mc.lineTo(...mapPoint(a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u));mc.stroke()}}});mc.fillStyle='#667e72';containerLayout.forEach(c=>{let [a,b]=mapPoint(c.x,c.z);mc.save();mc.translate(a,b);mc.rotate(-(c.angle||0));mc.fillRect(-c.w*.575,-c.d*.66,c.w*1.15,c.d*1.32);mc.restore()});mc.fillStyle='#3885a0';for(const spec of [irrigation,arecaWater]){let [a,b]=mapPoint(spec.house.x,spec.house.z);mc.fillRect(a-2,b-2,4,4);let [wx,wy]=mapPoint(spec.well.x,spec.well.z);mc.beginPath();mc.arc(wx,wy,1.5,0,6.28);mc.fill()}let [cx,cy]=mapPoint(camera.position.x,camera.position.z);mc.fillStyle='#294b36';mc.beginPath();mc.arc(cx,cy,4,0,6.28);mc.fill();mc.fillStyle='#647559';mc.font='10px sans-serif';mc.fillText('SITE / 位置示意',15,246)}
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 let frames=0;function tick(now){requestAnimationFrame(tick);let dt=Math.min((now-last)/1000,.05);last=now;if(transition){let t=THREE.MathUtils.clamp((now-transition.start)/1100,0,1),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.targetFrom,transition.target,s);if(t===1)transition=null}if(mode==='orbit'){controls.update()}else{let speed=(keys.ShiftLeft||keys.ShiftRight?14:5)*dt;let forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),move=new THREE.Vector3();const paused=$('dialog').open||document.hidden;if(!paused){move.addScaledVector(forward,(keys.KeyW?1:0)-(keys.KeyS?1:0)+touchInput.forward);move.addScaledVector(right,(keys.KeyD?1:0)-(keys.KeyA?1:0)+touchInput.x)}if(move.lengthSq()>1)move.normalize();move.multiplyScalar(speed);const lift=paused?0:(keys.KeyE||touchInput.up?1:0)-(keys.KeyQ||touchInput.down?1:0);if(mode==='fly')move.y=lift*speed;else{walkEyeHeight=THREE.MathUtils.clamp(walkEyeHeight+lift*dt,1.1,3.5);move.y=0}let next=camera.position.clone().add(move);let blocked=mode==='walk'&&(boundaryClearance(next.x,next.z)<.25||collisions.some(c=>{let dx=next.x-c.x,dz=next.z-c.z,a=c.angle||0;return Math.abs(Math.cos(a)*dx-Math.sin(a)*dz)<c.w/2+.3&&Math.abs(Math.sin(a)*dx+Math.cos(a)*dz)<c.d/2+.3}));if(!blocked)camera.position.copy(next);camera.position.x=THREE.MathUtils.clamp(camera.position.x,-190,190);camera.position.z=THREE.MathUtils.clamp(camera.position.z,-220,220);camera.position.y=mode==='walk'?walkEyeHeight+(containerLayout.some(c=>{let dx=camera.position.x-c.x,dz=camera.position.z-c.z;return Math.abs(Math.cos(housingAngle)*dx-Math.sin(housingAngle)*dz)<c.w/2&&Math.abs(Math.sin(housingAngle)*dx+Math.cos(housingAngle)*dz)<c.d/2})?.315:0):THREE.MathUtils.clamp(camera.position.y,1.75,280)}renderer.render(scene,camera);if(frames++%10===0)drawMap()}
-model.userData={designVersion:'V1.20 黑线道路调整',rooms:roomRoles,gateReference:'独立大门图稿待提供，当前为配套参考方案',units:'metres',boundary:land.map(p=>[...p]),plotArea:Math.abs(land.reduce((a,p,i)=>a+p[0]*land[(i+1)%3][1]-p[1]*land[(i+1)%3][0],0))/2,palmSpacing,roads:roads.map(r=>({name:r.name,width:r.width,surface:r.surface,points:r.points.map(p=>[...p])})),source:'原规划图概念比例，地界和比例保持不变；道路按用户黑线调整'};
+model.userData={designVersion:'V1.21 道路过渡与设施对齐',rooms:roomRoles,gateReference:'独立大门图稿待提供，当前为配套参考方案',units:'metres',boundary:land.map(p=>[...p]),plotArea:Math.abs(land.reduce((a,p,i)=>a+p[0]*land[(i+1)%3][1]-p[1]*land[(i+1)%3][0],0))/2,palmSpacing,roads:roads.map(r=>({name:r.name,width:r.width,endWidth:r.endWidth,surface:r.surface,points:r.points.map(p=>[...p])})),parking:{carport:{...parking.carport},temporary:{...parking.temporary}},facilityAlignment:{power:{...power},pump:{...irrigation.house}},source:'原规划图概念比例，地界和比例保持不变；道路按用户黑线调整'};
 window.__landExplorer={scene,model,camera,controls,houseRoofs,houseFacades,houseDoors,homeDoorCollisions,interiorGroups,deliveryDetails,roadGroup,palmSpacing,centralPlanting,perimeterTrees,perimeterGroup,arecaWater,arecaWaterGroup,palms,roads,goto,setMode,renderer,parking,carportGroup,carportRoofGroup,temporaryGroup,power,powerGroup,shadeTrees,shadeGroup,cableRoutes,cableGroup,irrigation,irrigationGroup,containerLayout,collisions,orchardTrees,orchardArea,land,housingAngle,passagePoints,fenceSlope,fenceIntercept};$('stats').textContent=palms.length+' 株槟榔（1.5 m 株行距） · '+orchardTrees.length+' 株果树 · '+shadeTrees.length+' 棵遮阴树';$('loading').style.display='none';tick(performance.now());
 
 function bindSizeToggle(buttonId, shellId, contentId, name){
