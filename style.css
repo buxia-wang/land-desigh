@@ -30,3 +30,6 @@
 .design-guide-link{display:block;padding:12px 0;margin:8px 0;color:#294b38;text-decoration:none;font-size:14px;border-bottom:1px solid #d7ddcf}.design-guide-link:focus-visible{outline:2px solid #294b38;outline-offset:3px}
 
 @media(max-width:550px){.view-toolbar{justify-content:flex-start;overflow-x:auto}.view-toolbar button{flex-shrink:0}}
+
+/* Keep the project name readable on narrow screens. */
+@media(max-width:550px){header{padding:0 10px;gap:6px}.brand{gap:7px;font-size:12px;letter-spacing:0;white-space:nowrap}.brandmark{width:30px;height:34px;font-size:26px}.brand span:not(.brandmark){font-size:8px;letter-spacing:1px}header #help{padding:8px 6px;font-size:11px}header #fullscreen{padding:3px 7px}}

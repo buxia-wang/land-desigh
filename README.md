@@ -1,4 +1,4 @@
-# 三角地块 3D 规划场景
+# 筑梦—3D实景规划
 
 Windows：安装 Node.js LTS 或 Python 3 后双击 `start-windows.cmd`。其他系统运行 `node preview.mjs` 或 `python3 preview.py`，再打开显示的本地网址。无需安装第三方依赖。
 
